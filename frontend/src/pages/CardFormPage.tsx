@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Box,
   Button,
@@ -18,6 +18,7 @@ import Slider from '@mui/material/Slider'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
+import CameraAltIcon from '@mui/icons-material/CameraAlt'
 import type { Card as CardType } from './CardsListPage'
 import {
   createCard,
@@ -50,6 +51,10 @@ const CardFormPage = () => {
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [cameraDialogOpen, setCameraDialogOpen] = useState(false)
+  const [cameraError, setCameraError] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     if (!isEdit || !id) return
@@ -92,6 +97,65 @@ const CardFormPage = () => {
       setPendingFile(file)
     }
     reader.readAsDataURL(file)
+  }
+
+  const startCamera = async () => {
+    setCameraError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false,
+      })
+      streamRef.current = stream
+      setCameraDialogOpen(true)
+    } catch (err) {
+      setCameraError(
+        err instanceof Error ? err.message : 'Could not access camera. Please allow camera permission.'
+      )
+    }
+  }
+
+  useEffect(() => {
+    if (!cameraDialogOpen || !streamRef.current || !videoRef.current) return
+    const video = videoRef.current
+    const stream = streamRef.current
+    video.srcObject = stream
+    video.onloadedmetadata = () => video.play()
+    return () => {
+      video.srcObject = null
+    }
+  }, [cameraDialogOpen])
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+    setCameraDialogOpen(false)
+    setCameraError(null)
+  }
+
+  const handleCapturePhoto = () => {
+    const video = videoRef.current
+    if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(video, 0, 0)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return
+        setImageSrc(dataUrl)
+        setPendingFile(new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' }))
+        setCropDialogOpen(true)
+        stopCamera()
+      },
+      'image/jpeg',
+      0.92
+    )
   }
 
   const onCropComplete = (_: Area, croppedPixels: Area) => {
@@ -190,6 +254,35 @@ const CardFormPage = () => {
         </DialogActions>
       </Dialog>
 
+      <Dialog open={cameraDialogOpen} onClose={stopCamera} maxWidth="sm" fullWidth>
+        <DialogTitle>Take photo</DialogTitle>
+        <DialogContent sx={{ position: 'relative', bgcolor: 'black', minHeight: 320 }}>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            style={{
+              width: '100%',
+              display: 'block',
+              maxHeight: 400,
+              objectFit: 'contain',
+            }}
+          />
+          {cameraError && (
+            <Typography color="error" sx={{ position: 'absolute', bottom: 16, left: 16, right: 16 }}>
+              {cameraError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={stopCamera}>Cancel</Button>
+          <Button variant="contained" startIcon={<CameraAltIcon />} onClick={handleCapturePhoto}>
+            Capture
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 1000, mx: 'auto' }}>
         <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: 4 }}>
           <Stack spacing={4}>
@@ -201,7 +294,6 @@ const CardFormPage = () => {
               <Grid size={{ xs: 12, md: 5 }}>
                 <Stack spacing={2}>
                   <Box
-                    component="label"
                     sx={{
                       border: '2px dashed',
                       borderColor: 'divider',
@@ -229,9 +321,28 @@ const CardFormPage = () => {
                         <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.primary', mb: 0.5 }}>
                           {isScanning ? 'Scanning…' : 'Upload Card Image'}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Click to browse files
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          Click to browse files or take a photo
                         </Typography>
+                        <Stack direction="row" spacing={1.5}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            component="label"
+                            startIcon={<AddPhotoAlternateIcon />}
+                          >
+                            Browse
+                            <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<CameraAltIcon />}
+                            onClick={startCamera}
+                          >
+                            Take photo
+                          </Button>
+                        </Stack>
                       </>
                     )}
                     {card.imageUrl && (
@@ -247,13 +358,17 @@ const CardFormPage = () => {
                         }}
                       />
                     )}
-                    <input type="file" hidden accept="image/*" onChange={handleFileChange} />
                   </Box>
                   {card.imageUrl && (
-                    <Button variant="outlined" component="label" sx={{ alignSelf: 'center' }}>
-                      Replace Image
-                      <input type="file" hidden accept="image/*" onChange={handleFileChange} />
-                    </Button>
+                    <Stack direction="row" spacing={1} sx={{ alignSelf: 'center' }}>
+                      <Button variant="outlined" component="label" size="small">
+                        Replace (file)
+                        <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+                      </Button>
+                      <Button variant="outlined" size="small" startIcon={<CameraAltIcon />} onClick={startCamera}>
+                        Replace (camera)
+                      </Button>
+                    </Stack>
                   )}
                 </Stack>
               </Grid>
