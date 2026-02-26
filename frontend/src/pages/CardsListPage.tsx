@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react'
 import {
+  Avatar,
   Box,
   Button,
   Chip,
   Grid,
+  InputAdornment,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
 import { Link as RouterLink } from 'react-router-dom'
+import SearchIcon from '@mui/icons-material/Search'
+import AddIcon from '@mui/icons-material/Add'
+import BusinessIcon from '@mui/icons-material/Business'
+import PhoneIcon from '@mui/icons-material/Phone'
+import EmailIcon from '@mui/icons-material/Email'
 import { fetchCards } from '../services/cardApi'
 
 export interface Card {
@@ -63,24 +70,27 @@ const CardsListPage = () => {
   const visibleCards = filterCards(cards, search, activeTag)
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={4}>
       <Paper
         elevation={0}
         sx={{
-          p: 2.5,
-          borderRadius: 3,
-          bgcolor: 'background.paper',
+          p: { xs: 3, md: 4 },
+          borderRadius: 4,
+          bgcolor: 'primary.main',
+          color: 'primary.contrastText',
           display: 'flex',
           flexDirection: { xs: 'column', md: 'row' },
-          gap: 2,
+          gap: 3,
           alignItems: { xs: 'flex-start', md: 'center' },
+          backgroundImage: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+          boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.3)',
         }}
       >
         <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            Business Cards
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, letterSpacing: '-0.02em' }}>
+            Your Contacts
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body1" sx={{ opacity: 0.9, fontSize: '1.1rem' }}>
             Store, search and organize all visiting cards in one place.
           </Typography>
         </Box>
@@ -88,31 +98,43 @@ const CardsListPage = () => {
           variant="contained"
           component={RouterLink}
           to="/cards/new"
-          sx={{ borderRadius: 999, px: 3 }}
+          startIcon={<AddIcon />}
+          sx={{
+            py: 1.2,
+            px: 3,
+            bgcolor: 'white',
+            color: 'primary.dark',
+            fontWeight: 700,
+            '&:hover': {
+              bgcolor: 'grey.100',
+              transform: 'translateY(-1px)',
+            },
+            transition: 'all 0.2s',
+          }}
         >
           Add Card
         </Button>
       </Paper>
 
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          borderRadius: 3,
-          bgcolor: 'background.paper',
-        }}
-      >
-        <Stack spacing={1.5}>
+      <Box>
+        <Stack spacing={2}>
           <TextField
             fullWidth
-            size="small"
             placeholder="Search by name, company, phone, email or tag"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+              sx: { bgcolor: 'background.paper', borderRadius: 3 }
+            }}
           />
 
           {allTags.length > 0 && (
-            <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ rowGap: 1 }}>
               {allTags.map((tag) => (
                 <Chip
                   key={tag}
@@ -120,14 +142,16 @@ const CardsListPage = () => {
                   clickable
                   color={activeTag === tag ? 'primary' : 'default'}
                   onClick={() => setActiveTag((prev) => (prev === tag ? null : tag))}
-                  sx={{ mb: 1 }}
-                  size="small"
+                  sx={{
+                    fontWeight: activeTag === tag ? 600 : 500,
+                    transition: 'all 0.2s'
+                  }}
                 />
               ))}
             </Stack>
           )}
         </Stack>
-      </Paper>
+      </Box>
 
       <Grid container spacing={3}>
         {visibleCards.map((card) => (
@@ -135,59 +159,93 @@ const CardsListPage = () => {
             <Paper
               component={RouterLink}
               to={`/cards/${card._id}`}
-              elevation={2}
+              elevation={1}
               sx={{
-                p: 2,
-                display: 'block',
+                p: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
                 textDecoration: 'none',
-                borderRadius: 3,
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                color: 'inherit',
+                borderRadius: 4,
+                transition: 'all 0.2s ease',
                 '&:hover': {
-                  transform: 'translateY(-3px)',
-                  boxShadow: 6,
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0px 12px 20px -8px rgba(15, 23, 42, 0.1)',
+                  borderColor: 'primary.light',
                 },
               }}
             >
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {card.name}
-              </Typography>
-              {card.company && (
-                <Typography variant="body2" color="text.secondary">
-                  {card.company}
-                </Typography>
-              )}
-              <Box sx={{ mt: 1 }}>
-                {card.phone && (
-                  <Typography variant="body2" color="text.secondary">
-                    {card.phone}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2.5, gap: 2 }}>
+                <Avatar
+                  sx={{
+                    width: 52,
+                    height: 52,
+                    bgcolor: 'primary.light',
+                    color: 'primary.contrastText',
+                    fontWeight: 600,
+                    fontSize: '1.25rem'
+                  }}
+                >
+                  {card.name ? card.name.charAt(0).toUpperCase() : '?'}
+                </Avatar>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }} noWrap>
+                    {card.name}
                   </Typography>
-                )}
-                {card.email && (
-                  <Typography variant="body2" color="text.secondary">
-                    {card.email}
-                  </Typography>
-                )}
+                  {card.company && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }} noWrap>
+                      <BusinessIcon sx={{ fontSize: 16 }} />
+                      {card.company}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
-              <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
-                {(card.tags || []).slice(0, 3).map((tag) => (
-                  <Chip key={tag} label={tag} size="small" />
-                ))}
-                {(card.tags || []).length > 3 && (
-                  <Chip
-                    label={`+${(card.tags || []).length - 3}`}
-                    size="small"
-                    variant="outlined"
-                  />
-                )}
-              </Stack>
+
+              <Box sx={{ mb: 2.5, flexGrow: 1 }}>
+                <Stack spacing={1}>
+                  {card.phone && (
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <PhoneIcon sx={{ fontSize: 18, color: 'text.secondary', opacity: 0.7 }} />
+                      {card.phone}
+                    </Typography>
+                  )}
+                  {card.email && (
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <EmailIcon sx={{ fontSize: 18, color: 'text.secondary', opacity: 0.7 }} />
+                      {card.email}
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
+
+              {card.tags && card.tags.length > 0 && (
+                <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', rowGap: 1, mt: 'auto', pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                  {card.tags.slice(0, 3).map((tag) => (
+                    <Chip key={tag} label={tag} size="small" variant="filled" sx={{ bgcolor: 'grey.100' }} />
+                  ))}
+                  {card.tags.length > 3 && (
+                    <Chip
+                      label={`+${card.tags.length - 3}`}
+                      size="small"
+                      variant="outlined"
+                    />
+                  )}
+                </Stack>
+              )}
             </Paper>
           </Grid>
         ))}
         {visibleCards.length === 0 && (
           <Grid item xs={12}>
-            <Typography color="text.secondary">
-              No cards found. Try adjusting your search or add a new card.
-            </Typography>
+            <Box sx={{ textAlign: 'center', py: 8, px: 2, bgcolor: 'background.paper', borderRadius: 4, border: '1px dashed', borderColor: 'divider' }}>
+              <Typography variant="h6" color="text.primary" sx={{ mb: 1 }}>
+                No cards found
+              </Typography>
+              <Typography color="text.secondary">
+                Try adjusting your search or add a new visiting card to your vault.
+              </Typography>
+            </Box>
           </Grid>
         )}
       </Grid>

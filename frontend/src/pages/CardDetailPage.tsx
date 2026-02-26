@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Box, Button, Chip, Stack, Typography, Paper } from '@mui/material'
+import { Box, Button, Chip, Stack, Typography, Paper, Divider, Avatar } from '@mui/material'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import LinkIcon from '@mui/icons-material/Link'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import BusinessIcon from '@mui/icons-material/Business'
+import PhoneIcon from '@mui/icons-material/Phone'
+import EmailIcon from '@mui/icons-material/Email'
 import type { Card as CardType } from './CardsListPage'
 import { deleteCard, fetchCardById } from '../services/cardApi'
 
@@ -37,90 +44,129 @@ const CardDetailPage = () => {
   }
 
   if (!card) {
-    return <Typography>Loading…</Typography>
+    return <Typography sx={{ m: 4 }}>Loading…</Typography>
   }
 
   return (
-    <Stack spacing={3} sx={{ maxWidth: 1100, mx: 'auto' }}>
+    <Stack spacing={4} sx={{ maxWidth: 900, mx: 'auto' }}>
+      <Box>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/')}
+          sx={{ color: 'text.secondary', fontWeight: 600 }}
+        >
+          Back to list
+        </Button>
+      </Box>
+
       <Paper
         sx={{
-          p: 3,
-          borderRadius: 3,
+          p: { xs: 3, md: 5 },
+          borderRadius: 4,
           display: 'flex',
           flexDirection: { xs: 'column', md: 'row' },
-          gap: 3,
+          gap: 5,
           bgcolor: 'background.paper',
         }}
-        elevation={2}
+        elevation={0}
       >
-        {card.imageUrl && (
-          <Box
-            component="img"
-            src={card.imageUrl}
-            alt={card.name}
-            sx={{ maxWidth: 360, borderRadius: 3, boxShadow: 3 }}
-          />
-        )}
-        <Stack spacing={1.5} flex={1}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            {card.name}
-          </Typography>
-          {card.company && (
-            <Typography variant="h6" color="text.secondary">
-              {card.company}
-            </Typography>
+        <Box sx={{ flex: '0 0 auto', width: { xs: '100%', md: 340 } }}>
+          {card.imageUrl ? (
+            <Box
+              component="img"
+              src={card.imageUrl}
+              alt={card.name}
+              sx={{ width: '100%', borderRadius: 3, display: 'block', border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}
+            />
+          ) : (
+            <Box sx={{ width: '100%', pt: '66%', bgcolor: 'grey.50', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed', borderColor: 'divider', position: 'relative' }}>
+              <Avatar sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 80, height: 80, bgcolor: 'primary.light', fontSize: '2.5rem' }}>
+                {card.name ? card.name.charAt(0).toUpperCase() : '?'}
+              </Avatar>
+            </Box>
           )}
-          {card.phone && (
-            <Typography variant="body1" color="text.secondary">
-              Phone: {card.phone}
+        </Box>
+
+        <Stack spacing={3} flex={1}>
+          <Box>
+            <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, letterSpacing: '-0.02em' }}>
+              {card.name}
             </Typography>
-          )}
-          {card.email && (
-            <Typography variant="body1" color="text.secondary">
-              Email: {card.email}
-            </Typography>
-          )}
+            {card.company && (
+              <Typography variant="h6" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <BusinessIcon />
+                {card.company}
+              </Typography>
+            )}
+          </Box>
+
+          <Divider />
+
+          <Stack spacing={2.5}>
+            {card.phone && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ bgcolor: 'secondary.light', color: 'secondary.contrastText', width: 44, height: 44 }}>
+                  <PhoneIcon />
+                </Avatar>
+                <Typography variant="body1" sx={{ fontWeight: 500, fontSize: '1.1rem' }}>
+                  {card.phone}
+                </Typography>
+              </Box>
+            )}
+            {card.email && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.contrastText', width: 44, height: 44 }}>
+                  <EmailIcon />
+                </Avatar>
+                <Typography variant="body1" sx={{ fontWeight: 500, fontSize: '1.1rem' }}>
+                  {card.email}
+                </Typography>
+              </Box>
+            )}
+          </Stack>
+
           {card.notes && (
             <Box
               sx={{
-                mt: 2,
-                p: 2,
-                borderRadius: 2,
+                mt: 1,
+                p: 3,
+                borderRadius: 3,
                 bgcolor: 'grey.50',
-                maxHeight: 220,
-                overflow: 'auto',
+                border: '1px solid',
+                borderColor: 'divider'
               }}
             >
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Full text from card
+              <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5, fontWeight: 700 }}>
+                Notes / OCR Text
               </Typography>
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'text.primary', fontFamily: 'monospace', lineHeight: 1.6 }}>
                 {card.notes}
               </Typography>
             </Box>
           )}
-          <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
-            {(card.tags || []).map((tag) => (
-              <Chip key={tag} label={tag} sx={{ mb: 1 }} />
-            ))}
+
+          {card.tags && card.tags.length > 0 && (
+            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+              {card.tags.map((tag) => (
+                <Chip key={tag} label={tag} sx={{ mb: 1, fontWeight: 600 }} color="primary" variant="outlined" />
+              ))}
+            </Stack>
+          )}
+
+          <Stack direction="row" spacing={2} sx={{ pt: 3, mt: 'auto', borderTop: '1px solid', borderColor: 'divider' }}>
+            <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/cards/${id}/edit`)}>
+              Edit Info
+            </Button>
+            <Button variant="outlined" color="inherit" startIcon={<LinkIcon />} onClick={handleCopyLink}>
+              Copy Link
+            </Button>
+            <Box sx={{ flexGrow: 1 }} />
+            <Button variant="text" color="error" startIcon={<DeleteOutlineIcon />} onClick={handleDelete}>
+              Delete
+            </Button>
           </Stack>
         </Stack>
       </Paper>
-
-      <Stack direction="row" spacing={2}>
-        <Button variant="contained" onClick={() => navigate(`/cards/${id}/edit`)}>
-          Edit
-        </Button>
-        <Button variant="outlined" color="error" onClick={handleDelete}>
-          Delete
-        </Button>
-        <Button variant="text" onClick={handleCopyLink}>
-          Copy card link
-        </Button>
-        <Button variant="text" onClick={() => navigate('/')}>
-          Back to list
-        </Button>
-      </Stack>
     </Stack>
   )
 }

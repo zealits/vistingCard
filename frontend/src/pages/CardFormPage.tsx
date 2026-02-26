@@ -5,6 +5,7 @@ import {
   Button,
   Chip,
   Grid,
+  Paper,
   Stack,
   TextField,
   Typography,
@@ -16,6 +17,7 @@ import DialogTitle from '@mui/material/DialogTitle'
 import Slider from '@mui/material/Slider'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
+import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import type { Card as CardType } from './CardsListPage'
 import {
   createCard,
@@ -188,135 +190,165 @@ const CardFormPage = () => {
         </DialogActions>
       </Dialog>
 
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{
-          maxWidth: 1100,
-          mx: 'auto',
-        }}
-      >
-        <Stack spacing={3}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            {isEdit ? 'Edit Card' : 'Add New Card'}
-          </Typography>
+      <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 1000, mx: 'auto' }}>
+        <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: 4 }}>
+          <Stack spacing={4}>
+            <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.02em' }}>
+              {isEdit ? 'Edit Card' : 'Add New Card'}
+            </Typography>
 
-          <Grid container spacing={3}>
-          <Grid item xs={12} md={5}>
-            <Stack spacing={2}>
-              <Button
-                variant="outlined"
-                component="label"
-                sx={{ borderRadius: 999 }}
-                fullWidth
-              >
-                {isScanning ? 'Scanning…' : 'Upload & Scan Card Image'}
-                <input type="file" hidden accept="image/*" onChange={handleFileChange} />
-              </Button>
-              {card.imageUrl && (
-                <Box
-                  component="img"
-                  src={card.imageUrl}
-                  alt="Card"
-                  sx={{
-                    width: '100%',
-                    borderRadius: 3,
-                    boxShadow: 3,
-                    objectFit: 'cover',
-                  }}
-                />
-              )}
-            </Stack>
-          </Grid>
-
-          <Grid item xs={12} md={7}>
-            <Stack spacing={2.5}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    required
-                    fullWidth
-                    label="Name"
-                    value={card.name || ''}
-                    onChange={handleChange('name')}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Company"
-                    value={card.company || ''}
-                    onChange={handleChange('company')}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Phone"
-                    value={card.phone || ''}
-                    onChange={handleChange('phone')}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    value={card.email || ''}
-                    onChange={handleChange('email')}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Notes (full text from card)"
-                    multiline
-                    minRows={4}
-                    value={card.notes || ''}
-                    onChange={handleChange('notes')}
-                  />
-                </Grid>
+            <Grid container spacing={5}>
+              <Grid item xs={12} md={5}>
+                <Stack spacing={2}>
+                  <Box
+                    component="label"
+                    sx={{
+                      border: '2px dashed',
+                      borderColor: 'divider',
+                      borderRadius: 4,
+                      p: 4,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: 'grey.50',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      minHeight: 240,
+                      '&:hover': {
+                        bgcolor: 'grey.100',
+                        borderColor: 'primary.main',
+                      },
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {!card.imageUrl && (
+                      <>
+                        <AddPhotoAlternateIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                        <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.primary', mb: 0.5 }}>
+                          {isScanning ? 'Scanning…' : 'Upload Card Image'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Click to browse files
+                        </Typography>
+                      </>
+                    )}
+                    {card.imageUrl && (
+                      <Box
+                        component="img"
+                        src={card.imageUrl}
+                        alt="Card"
+                        sx={{
+                          width: '100%',
+                          borderRadius: 2,
+                          objectFit: 'cover',
+                          display: 'block'
+                        }}
+                      />
+                    )}
+                    <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+                  </Box>
+                  {card.imageUrl && (
+                    <Button variant="outlined" component="label" sx={{ alignSelf: 'center' }}>
+                      Replace Image
+                      <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+                    </Button>
+                  )}
+                </Stack>
               </Grid>
 
-              <Stack spacing={1}>
-                <Stack direction="row" spacing={1}>
-                  <TextField
-                    label="Add tag"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    size="small"
-                  />
-                  <Button variant="contained" onClick={handleAddTag}>
-                    Add
-                  </Button>
-                </Stack>
-                <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {(card.tags || []).map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={tag}
-                      onDelete={() => handleRemoveTag(tag)}
-                      sx={{ mb: 1 }}
-                    />
-                  ))}
-                </Stack>
-              </Stack>
-            </Stack>
-          </Grid>
-          </Grid>
+              <Grid item xs={12} md={7}>
+                <Stack spacing={3}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        required
+                        fullWidth
+                        label="Name"
+                        value={card.name || ''}
+                        onChange={handleChange('name')}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Company"
+                        value={card.company || ''}
+                        onChange={handleChange('company')}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Phone"
+                        value={card.phone || ''}
+                        onChange={handleChange('phone')}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Email"
+                        value={card.email || ''}
+                        onChange={handleChange('email')}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Notes (full text from card)"
+                        multiline
+                        minRows={4}
+                        value={card.notes || ''}
+                        onChange={handleChange('notes')}
+                      />
+                    </Grid>
+                  </Grid>
 
-          <Stack direction="row" spacing={2} sx={{ pt: 1 }}>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={isSaving || !card.name}
-            >
-              {isEdit ? 'Save changes' : 'Create card'}
-            </Button>
-            <Button variant="text" onClick={() => navigate('/')}>
-              Cancel
-            </Button>
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" spacing={1}>
+                      <TextField
+                        label="Add tag"
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        size="small"
+                        sx={{ flexGrow: 1 }}
+                      />
+                      <Button variant="contained" onClick={handleAddTag}>
+                        Add
+                      </Button>
+                    </Stack>
+                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                      {(card.tags || []).map((tag) => (
+                        <Chip
+                          key={tag}
+                          label={tag}
+                          onDelete={() => handleRemoveTag(tag)}
+                          sx={{ mb: 1 }}
+                        />
+                      ))}
+                    </Stack>
+                  </Stack>
+                </Stack>
+              </Grid>
+            </Grid>
+
+            <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+              <Button variant="text" color="inherit" onClick={() => navigate('/')}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={isSaving || !card.name}
+                sx={{ px: 4 }}
+              >
+                {isSaving ? 'Saving...' : isEdit ? 'Save changes' : 'Create card'}
+              </Button>
+            </Box>
           </Stack>
-        </Stack>
+        </Paper>
       </Box>
     </>
   )
