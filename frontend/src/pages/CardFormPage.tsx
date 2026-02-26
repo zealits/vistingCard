@@ -19,6 +19,7 @@ import 'react-image-crop/dist/ReactCrop.css'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
 import CameraswitchIcon from '@mui/icons-material/Cameraswitch'
+import RotateRightIcon from '@mui/icons-material/RotateRight'
 import type { Card as CardType } from './CardsListPage'
 import {
   createCard,
@@ -54,6 +55,7 @@ const CardFormPage = () => {
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user')
   const [cameraSwitching, setCameraSwitching] = useState(false)
+  const [isRotating, setIsRotating] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
@@ -308,6 +310,48 @@ const CardFormPage = () => {
     }
   }
 
+  const handleRotateDisplayImage = useCallback(() => {
+    const url = card.imageUrl
+    if (!url) return
+    setIsRotating(true)
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const { width, height } = img
+      const canvas = document.createElement('canvas')
+      canvas.width = height
+      canvas.height = width
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        setIsRotating(false)
+        return
+      }
+      ctx.setTransform(0, 1, -1, 0, height, 0)
+      ctx.drawImage(img, 0, 0)
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            setIsRotating(false)
+            return
+          }
+          const file = new File([blob], 'card.jpg', { type: 'image/jpeg' })
+          uploadCardImage(file)
+            .then(({ imageUrl }) => setCard((prev) => ({ ...prev, imageUrl })))
+            .catch((err) => console.error('Failed to rotate/upload image', err))
+            .finally(() => setIsRotating(false))
+        },
+        'image/jpeg',
+        0.92
+      )
+    }
+    img.onerror = () => {
+      console.error('Failed to load image for rotation')
+      setIsRotating(false)
+    }
+    img.src = url
+  }, [card.imageUrl])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!card.name) return
@@ -502,7 +546,16 @@ const CardFormPage = () => {
                     )}
                   </Box>
                   {card.imageUrl && (
-                    <Stack direction="row" spacing={1} sx={{ alignSelf: 'center' }}>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ alignSelf: 'center' }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<RotateRightIcon />}
+                        onClick={handleRotateDisplayImage}
+                        disabled={isRotating}
+                      >
+                        {isRotating ? 'Rotating…' : 'Rotate 90°'}
+                      </Button>
                       <Button variant="outlined" component="label" size="small">
                         Replace (file)
                         <input type="file" hidden accept="image/*" onChange={handleFileChange} />
