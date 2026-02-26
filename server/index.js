@@ -266,7 +266,7 @@ app.post('/api/cards/ocr', async (req, res) => {
 // Serve frontend build (static files + SPA fallback)
 const buildPath = path.join(__dirname, '..', 'frontend', 'dist')
 app.use(express.static(buildPath))
-app.get('*', (req, res, next) => {
+app.get('/(.*)', (req, res, next) => {
   // Skip API routes
   if (req.path.startsWith('/api')) return next()
   res.sendFile(path.join(buildPath, 'index.html'))
