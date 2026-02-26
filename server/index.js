@@ -59,6 +59,27 @@ cloudinary.config({
 
 const upload = multer({ storage: multer.memoryStorage() })
 
+async function deleteCardAndCloudinaryImages(cardId) {
+  const card = await Card.findById(cardId)
+  if (!card) return null
+  if (card.cloudinaryPublicId) {
+    try {
+      await cloudinary.uploader.destroy(card.cloudinaryPublicId)
+    } catch (err) {
+      console.error('Failed to delete Cloudinary image (front)', err)
+    }
+  }
+  if (card.cloudinaryPublicIdBack) {
+    try {
+      await cloudinary.uploader.destroy(card.cloudinaryPublicIdBack)
+    } catch (err) {
+      console.error('Failed to delete Cloudinary image (back)', err)
+    }
+  }
+  await Card.findByIdAndDelete(cardId)
+  return card
+}
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
 })
@@ -141,23 +162,7 @@ app.post('/api/pending-changes/:id/apply', requireAuth, async (req, res) => {
     if (!cardId) return res.status(400).json({ message: 'Invalid pending change' })
 
     if (pending.type === 'delete') {
-      const card = await Card.findByIdAndDelete(cardId)
-      if (card) {
-        if (card.cloudinaryPublicId) {
-          try {
-            await cloudinary.uploader.destroy(card.cloudinaryPublicId)
-          } catch (e) {
-            console.error('Failed to delete Cloudinary image', e)
-          }
-        }
-        if (card.cloudinaryPublicIdBack) {
-          try {
-            await cloudinary.uploader.destroy(card.cloudinaryPublicIdBack)
-          } catch (e) {
-            console.error('Failed to delete Cloudinary back image', e)
-          }
-        }
-      }
+      await deleteCardAndCloudinaryImages(cardId)
     } else if (pending.type === 'edit' && pending.payload) {
       const update = { ...pending.payload }
       delete update._id
@@ -200,22 +205,8 @@ app.post('/api/pending-changes', async (req, res) => {
 
 app.delete('/api/cards/:id', async (req, res) => {
   try {
-    const card = await Card.findByIdAndDelete(req.params.id)
+    const card = await deleteCardAndCloudinaryImages(req.params.id)
     if (!card) return res.status(404).json({ message: 'Card not found' })
-    if (card.cloudinaryPublicId) {
-      try {
-        await cloudinary.uploader.destroy(card.cloudinaryPublicId)
-      } catch (err) {
-        console.error('Failed to delete Cloudinary image', err)
-      }
-    }
-    if (card.cloudinaryPublicIdBack) {
-      try {
-        await cloudinary.uploader.destroy(card.cloudinaryPublicIdBack)
-      } catch (err) {
-        console.error('Failed to delete Cloudinary back image', err)
-      }
-    }
     res.status(204).end()
   } catch (err) {
     console.error('Error deleting card', err)

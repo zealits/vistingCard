@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Box, Button, Chip, Stack, Typography, Paper, Divider, Avatar, Snackbar, Alert } from '@mui/material'
+import { Box, Button, Chip, Stack, Typography, Paper, Divider, Avatar, Snackbar, Alert, Dialog, DialogContent, IconButton } from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import LinkIcon from '@mui/icons-material/Link'
@@ -203,11 +204,41 @@ const CardDetailPage = () => {
         </Stack>
       </Paper>
 
-      <Snackbar open={deleteSnackOpen} autoHideDuration={8000} onClose={() => setDeleteSnackOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity="info" onClose={() => setDeleteSnackOpen(false)}>
-          Your card will be deleted in 24 hours.
-        </Alert>
-      </Snackbar>
+      <Dialog
+        open={deleteSnackOpen}
+        onClose={() => {}}
+        disableEscapeKeyDown
+        hideBackdrop={false}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: 320,
+            maxWidth: 420,
+          },
+        }}
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+        }}
+      >
+        <DialogContent sx={{ pt: 3, pb: 2, px: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+            <Alert severity="info" icon={false} sx={{ flex: 1, py: 0, '& .MuiAlert-message': { py: 0.5 } }}>
+              Your card will be deleted in 24 hours.
+            </Alert>
+            <IconButton
+              aria-label="Close"
+              onClick={() => setDeleteSnackOpen(false)}
+              sx={{ mt: -0.5, mr: -0.5 }}
+              size="small"
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogContent>
+      </Dialog>
       {deleteError && (
         <Snackbar open={!!deleteError} autoHideDuration={6000} onClose={() => setDeleteError(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
           <Alert severity="error" onClose={() => setDeleteError(null)}>{deleteError}</Alert>
