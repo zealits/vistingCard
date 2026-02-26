@@ -29,14 +29,14 @@ jobs:
         working-directory: ./server
 
       # Step 4: Install frontend dependencies
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: ./frontend
+      # - name: Install frontend dependencies
+      #   run: npm ci
+      #   working-directory: ./frontend
 
       # Step 5: Build the frontend application
-      - name: Build frontend application
-        run: npm run build
-        working-directory: ./frontend
+      # - name: Build frontend application
+      #   run: npm run build
+      #   working-directory: ./frontend
 
       # Step 6: Setup SSH for Deployment
       - name: Setup SSH
