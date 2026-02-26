@@ -5,11 +5,32 @@ const express = require('express')
 const cors = require('cors')
 const mongoose = require('mongoose')
 const multer = require('multer')
+const jwt = require('jsonwebtoken')
 const cloudinary = require('cloudinary').v2
 const axios = require('axios')
 const Card = require('./models/Card')
+const PendingChange = require('./models/PendingChange')
 
 const app = express()
+// Dashboard auth: set ADMIN_USERNAME, ADMIN_PASSWORD, JWT_SECRET in production
+const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production'
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin'
+
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  if (!token) {
+    return res.status(401).json({ message: 'Authentication required' })
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET)
+    req.user = decoded
+    next()
+  } catch (err) {
+    return res.status(401).json({ message: 'Invalid or expired token' })
+  }
+}
 
 app.use(
   cors({
@@ -83,6 +104,97 @@ app.put('/api/cards/:id', async (req, res) => {
   } catch (err) {
     console.error('Error updating card', err)
     res.status(400).json({ message: 'Failed to update card' })
+  }
+})
+
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body || {}
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    const token = jwt.sign(
+      { sub: 'admin', role: 'admin' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+    return res.json({ token })
+  }
+  res.status(401).json({ message: 'Invalid username or password' })
+})
+
+app.get('/api/pending-changes', requireAuth, async (req, res) => {
+  try {
+    const list = await PendingChange.find()
+      .sort({ scheduledAt: 1 })
+      .populate('cardId')
+      .lean()
+    res.json(list)
+  } catch (err) {
+    console.error('Error fetching pending changes', err)
+    res.status(500).json({ message: 'Failed to fetch pending changes' })
+  }
+})
+
+app.post('/api/pending-changes/:id/apply', requireAuth, async (req, res) => {
+  try {
+    const pending = await PendingChange.findById(req.params.id).populate('cardId')
+    if (!pending) return res.status(404).json({ message: 'Pending change not found' })
+    const cardId = pending.cardId?._id || pending.cardId
+    if (!cardId) return res.status(400).json({ message: 'Invalid pending change' })
+
+    if (pending.type === 'delete') {
+      const card = await Card.findByIdAndDelete(cardId)
+      if (card) {
+        if (card.cloudinaryPublicId) {
+          try {
+            await cloudinary.uploader.destroy(card.cloudinaryPublicId)
+          } catch (e) {
+            console.error('Failed to delete Cloudinary image', e)
+          }
+        }
+        if (card.cloudinaryPublicIdBack) {
+          try {
+            await cloudinary.uploader.destroy(card.cloudinaryPublicIdBack)
+          } catch (e) {
+            console.error('Failed to delete Cloudinary back image', e)
+          }
+        }
+      }
+    } else if (pending.type === 'edit' && pending.payload) {
+      const update = { ...pending.payload }
+      delete update._id
+      await Card.findByIdAndUpdate(cardId, update)
+    }
+
+    await PendingChange.findByIdAndDelete(pending._id)
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error applying pending change', err)
+    res.status(500).json({ message: 'Failed to apply change' })
+  }
+})
+
+app.post('/api/pending-changes', async (req, res) => {
+  try {
+    const { type, cardId, payload } = req.body
+    if (!type || !cardId) {
+      return res.status(400).json({ message: 'type and cardId are required' })
+    }
+    if (!['edit', 'delete'].includes(type)) {
+      return res.status(400).json({ message: 'type must be edit or delete' })
+    }
+    const card = await Card.findById(cardId)
+    if (!card) return res.status(404).json({ message: 'Card not found' })
+    const scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    const pending = await PendingChange.create({
+      type,
+      cardId,
+      payload: type === 'edit' ? payload : undefined,
+      scheduledAt,
+    })
+    const populated = await PendingChange.findById(pending._id).populate('cardId').lean()
+    res.status(201).json(populated)
+  } catch (err) {
+    console.error('Error creating pending change', err)
+    res.status(400).json({ message: 'Failed to schedule change' })
   }
 })
 

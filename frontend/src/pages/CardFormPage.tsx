@@ -14,6 +14,8 @@ import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
@@ -25,6 +27,7 @@ import {
   createCard,
   fetchCardById,
   updateCard,
+  scheduleEdit,
   uploadCardImage,
   runOcrOnImages,
 } from '../services/cardApi'
@@ -58,6 +61,8 @@ const CardFormPage = () => {
   const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user')
   const [cameraSwitching, setCameraSwitching] = useState(false)
   const [isRotating, setIsRotating] = useState(false)
+  const [editSnackOpen, setEditSnackOpen] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
@@ -385,16 +390,22 @@ const CardFormPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!card.name) return
+    setEditError(null)
     try {
       setIsSaving(true)
       if (isEdit && id) {
-        await updateCard(id, card)
+        await scheduleEdit(id, card)
+        setEditSnackOpen(true)
+        setTimeout(() => {
+          navigate(`/cards/${id}`)
+        }, 1500)
       } else {
         await createCard(card)
+        navigate('/')
       }
-      navigate('/')
     } catch (err) {
       console.error('Failed to save card', err)
+      if (isEdit) setEditError('Failed to schedule update. Please try again.')
     } finally {
       setIsSaving(false)
     }
@@ -500,6 +511,17 @@ const CardFormPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar open={editSnackOpen} autoHideDuration={8000} onClose={() => setEditSnackOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity="info" onClose={() => setEditSnackOpen(false)}>
+          Your information will be updated in 24 hours. Until then, the current information will be shown.
+        </Alert>
+      </Snackbar>
+      {editError && (
+        <Snackbar open={!!editError} autoHideDuration={6000} onClose={() => setEditError(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+          <Alert severity="error" onClose={() => setEditError(null)}>{editError}</Alert>
+        </Snackbar>
+      )}
 
       <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 1000, mx: 'auto' }}>
         <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: 4 }}>

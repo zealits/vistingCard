@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Box, Button, Chip, Stack, Typography, Paper, Divider, Avatar } from '@mui/material'
+import { Box, Button, Chip, Stack, Typography, Paper, Divider, Avatar, Snackbar, Alert } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import LinkIcon from '@mui/icons-material/Link'
@@ -10,12 +10,14 @@ import PhoneIcon from '@mui/icons-material/Phone'
 import EmailIcon from '@mui/icons-material/Email'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
 import type { Card as CardType } from './CardsListPage'
-import { deleteCard, fetchCardById } from '../services/cardApi'
+import { fetchCardById, scheduleDelete } from '../services/cardApi'
 
 const CardDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const [card, setCard] = useState<CardType | null>(null)
+  const [deleteSnackOpen, setDeleteSnackOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -26,11 +28,13 @@ const CardDetailPage = () => {
 
   const handleDelete = async () => {
     if (!id) return
+    setDeleteError(null)
     try {
-      await deleteCard(id)
-      navigate('/')
+      await scheduleDelete(id)
+      setDeleteSnackOpen(true)
     } catch (err) {
-      console.error('Failed to delete card', err)
+      console.error('Failed to schedule delete', err)
+      setDeleteError('Failed to schedule deletion. Please try again.')
     }
   }
 
@@ -198,6 +202,17 @@ const CardDetailPage = () => {
           </Stack>
         </Stack>
       </Paper>
+
+      <Snackbar open={deleteSnackOpen} autoHideDuration={8000} onClose={() => setDeleteSnackOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity="info" onClose={() => setDeleteSnackOpen(false)}>
+          Your card will be deleted in 24 hours.
+        </Alert>
+      </Snackbar>
+      {deleteError && (
+        <Snackbar open={!!deleteError} autoHideDuration={6000} onClose={() => setDeleteError(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+          <Alert severity="error" onClose={() => setDeleteError(null)}>{deleteError}</Alert>
+        </Snackbar>
+      )}
     </Stack>
   )
 }

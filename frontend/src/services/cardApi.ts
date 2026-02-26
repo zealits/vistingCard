@@ -1,9 +1,25 @@
 import axios from 'axios'
 import type { Card } from '../pages/CardsListPage'
+import { getAuthToken } from './auth'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5070/api',
 })
+
+function authHeaders() {
+  const token = getAuthToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+export interface PendingChange {
+  _id: string
+  type: 'edit' | 'delete'
+  cardId: Card | string
+  payload?: Partial<Card>
+  scheduledAt: string
+  createdAt?: string
+  updatedAt?: string
+}
 
 export async function fetchCards(): Promise<Card[]> {
   const res = await api.get<Card[]>('/cards')
@@ -27,6 +43,36 @@ export async function updateCard(id: string, card: Partial<Card>): Promise<Card>
 
 export async function deleteCard(id: string): Promise<void> {
   await api.delete(`/cards/${id}`)
+}
+
+export async function scheduleDelete(cardId: string): Promise<PendingChange> {
+  const res = await api.post<PendingChange>('/pending-changes', { type: 'delete', cardId })
+  return res.data
+}
+
+export async function scheduleEdit(cardId: string, payload: Partial<Card>): Promise<PendingChange> {
+  const res = await api.post<PendingChange>('/pending-changes', { type: 'edit', cardId, payload })
+  return res.data
+}
+
+export async function fetchPendingChanges(): Promise<PendingChange[]> {
+  const res = await api.get<PendingChange[]>('/pending-changes', {
+    headers: authHeaders(),
+  })
+  return res.data
+}
+
+export async function applyPendingChange(pendingId: string): Promise<void> {
+  await api.post(
+    `/pending-changes/${pendingId}/apply`,
+    {},
+    { headers: authHeaders() },
+  )
+}
+
+export async function loginAdmin(username: string, password: string): Promise<{ token: string }> {
+  const res = await api.post<{ token: string }>('/auth/login', { username, password })
+  return res.data
 }
 
 export async function uploadCardImage(

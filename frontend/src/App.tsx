@@ -1,9 +1,11 @@
-import { AppBar, Box, Container, Toolbar } from '@mui/material'
-import { Route, Routes } from 'react-router-dom'
+import { AppBar, Box, Container, Toolbar, Button } from '@mui/material'
+import { Route, Routes, Link as RouterLink } from 'react-router-dom'
 import CardsListPage from './pages/CardsListPage'
 import logo from './assets/giftygen_logo.png'
 import CardFormPage from './pages/CardFormPage'
 import CardDetailPage from './pages/CardDetailPage'
+import DashboardPage from './pages/DashboardPage'
+import DashboardLoginPage from './pages/DashboardLoginPage'
 
 function App() {
   return (
@@ -16,7 +18,7 @@ function App() {
           borderColor: 'divider',
         }}
       >
-        <Toolbar sx={{ maxWidth: 1200, mx: 'auto', width: '100%', px: { xs: 2, sm: 3 } }}>
+        <Toolbar sx={{ maxWidth: 1200, mx: 'auto', width: '100%', px: { xs: 2, sm: 3 }, justifyContent: 'space-between' }}>
           <a
             href="https://giftygen.com/"
             target="_blank"
@@ -29,6 +31,9 @@ function App() {
               style={{ height: 80, width: 'auto', display: 'block' }}
             />
           </a>
+          <Button component={RouterLink} to="/aiiventure/dashboard" color="inherit" sx={{ fontWeight: 600 }}>
+            Dashboard
+          </Button>
         </Toolbar>
       </AppBar>
       <Container
@@ -45,6 +50,8 @@ function App() {
           <Route path="/cards/new" element={<CardFormPage />} />
           <Route path="/cards/:id" element={<CardDetailPage />} />
           <Route path="/cards/:id/edit" element={<CardFormPage />} />
+          <Route path="/aiiventure/login" element={<DashboardLoginPage />} />
+          <Route path="/aiiventure/dashboard" element={<DashboardPage />} />
         </Routes>
       </Container>
     </Box>
