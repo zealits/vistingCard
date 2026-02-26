@@ -1,5 +1,6 @@
 require('dotenv').config()
 
+const path = require('path')
 const express = require('express')
 const cors = require('cors')
 const mongoose = require('mongoose')
@@ -260,6 +261,15 @@ app.post('/api/cards/ocr', async (req, res) => {
     console.error('Error calling OCR service', err)
     res.status(500).json({ message: 'Failed to parse card image' })
   }
+})
+
+// Serve frontend build (static files + SPA fallback)
+const buildPath = path.join(__dirname, '..', 'frontend', 'dist')
+app.use(express.static(buildPath))
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api')) return next()
+  res.sendFile(path.join(buildPath, 'index.html'))
 })
 
 app.listen(PORT, () => {
