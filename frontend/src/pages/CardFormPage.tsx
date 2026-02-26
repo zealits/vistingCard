@@ -26,7 +26,7 @@ import {
   fetchCardById,
   updateCard,
   uploadCardImage,
-  runOcrOnImage,
+  runOcrOnImages,
 } from '../services/cardApi'
 import { getCroppedBlob } from '../utils/imageCrop'
 
@@ -40,6 +40,7 @@ const CardFormPage = () => {
     company: '',
     phone: '',
     email: '',
+    address: '',
     notes: '',
     tags: [],
   })
@@ -47,6 +48,7 @@ const CardFormPage = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
+  const [cropSide, setCropSide] = useState<'front' | 'back'>('front')
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [crop, setCrop] = useState<Crop | undefined>(undefined)
   const [imageNaturalSize, setImageNaturalSize] = useState<{ width: number; height: number } | null>(null)
@@ -90,9 +92,10 @@ const CardFormPage = () => {
     }))
   }
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (side: 'front' | 'back') => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setCropSide(side)
     const reader = new FileReader()
     reader.onload = () => {
       setImageSrc(reader.result as string)
@@ -100,9 +103,11 @@ const CardFormPage = () => {
       setPendingFile(file)
     }
     reader.readAsDataURL(file)
+    e.target.value = ''
   }
 
-  const startCamera = () => {
+  const startCamera = (side: 'front' | 'back') => {
+    setCropSide(side)
     setCameraError(null)
     setCameraFacingMode('user')
     setCameraDialogOpen(true)
@@ -293,9 +298,22 @@ const CardFormPage = () => {
       const croppedFile = new File([blob], pendingFile?.name || 'card.jpg', {
         type: 'image/jpeg',
       })
-      const { imageUrl } = await uploadCardImage(croppedFile)
-      setCard((prev) => ({ ...prev, imageUrl }))
-      const ocrData = await runOcrOnImage(imageUrl)
+      const { imageUrl, publicId } = await uploadCardImage(croppedFile)
+      setCard((prev) => {
+        const next = { ...prev }
+        if (cropSide === 'front') {
+          next.imageUrl = imageUrl
+          next.cloudinaryPublicId = publicId
+        } else {
+          next.imageUrlBack = imageUrl
+          next.cloudinaryPublicIdBack = publicId
+        }
+        return next
+      })
+      const urls = cropSide === 'front'
+        ? [imageUrl, card.imageUrlBack].filter(Boolean) as string[]
+        : [card.imageUrl, imageUrl].filter(Boolean) as string[]
+      const ocrData = await runOcrOnImages(urls)
       setCard((prev) => ({
         ...prev,
         ...ocrData,
@@ -310,8 +328,8 @@ const CardFormPage = () => {
     }
   }
 
-  const handleRotateDisplayImage = useCallback(() => {
-    const url = card.imageUrl
+  const handleRotateDisplayImage = useCallback((side: 'front' | 'back') => {
+    const url = side === 'front' ? card.imageUrl : card.imageUrlBack
     if (!url) return
     setIsRotating(true)
     const img = new Image()
@@ -337,7 +355,19 @@ const CardFormPage = () => {
           }
           const file = new File([blob], 'card.jpg', { type: 'image/jpeg' })
           uploadCardImage(file)
-            .then(({ imageUrl }) => setCard((prev) => ({ ...prev, imageUrl })))
+            .then(({ imageUrl, publicId }) => {
+              setCard((prev) => {
+                const next = { ...prev }
+                if (side === 'front') {
+                  next.imageUrl = imageUrl
+                  next.cloudinaryPublicId = publicId
+                } else {
+                  next.imageUrlBack = imageUrl
+                  next.cloudinaryPublicIdBack = publicId
+                }
+                return next
+              })
+            })
             .catch((err) => console.error('Failed to rotate/upload image', err))
             .finally(() => setIsRotating(false))
         },
@@ -350,7 +380,7 @@ const CardFormPage = () => {
       setIsRotating(false)
     }
     img.src = url
-  }, [card.imageUrl])
+  }, [card.imageUrl, card.imageUrlBack])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -378,7 +408,9 @@ const CardFormPage = () => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Crop card image</DialogTitle>
+        <DialogTitle>
+          Crop card image ({cropSide === 'front' ? 'front' : 'back'})
+        </DialogTitle>
         <DialogContent
           sx={{
             position: 'relative',
@@ -420,9 +452,9 @@ const CardFormPage = () => {
           <Button
             variant="contained"
             onClick={handleApplyCropAndScan}
-            disabled={!crop || !imageNaturalSize}
+            disabled={!crop || !imageNaturalSize || isScanning}
           >
-            Apply & Scan
+            {isScanning ? 'Scanning…' : 'Apply & Scan'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -478,92 +510,119 @@ const CardFormPage = () => {
 
             <Grid container spacing={5}>
               <Grid size={{ xs: 12, md: 5 }}>
-                <Stack spacing={2}>
-                  <Box
-                    sx={{
-                      border: '2px dashed',
-                      borderColor: 'divider',
-                      borderRadius: 4,
-                      p: 4,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: 'grey.50',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      minHeight: 240,
-                      '&:hover': {
-                        bgcolor: 'grey.100',
-                        borderColor: 'primary.main',
-                      },
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {!card.imageUrl && (
-                      <>
-                        <AddPhotoAlternateIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                        <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.primary', mb: 0.5 }}>
-                          {isScanning ? 'Scanning…' : 'Upload Card Image'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          Click to browse files or take a photo
-                        </Typography>
-                        <Stack direction="row" spacing={1.5}>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            component="label"
-                            startIcon={<AddPhotoAlternateIcon />}
-                          >
-                            Browse
-                            <input type="file" hidden accept="image/*" onChange={handleFileChange} />
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<CameraAltIcon />}
-                            onClick={startCamera}
-                          >
-                            Take photo
-                          </Button>
-                        </Stack>
-                      </>
-                    )}
+                <Stack spacing={3}>
+                  <Stack spacing={1.5}>
+                    <Typography variant="subtitle2" color="text.secondary" fontWeight={600}>
+                      Front of card
+                    </Typography>
+                    <Box
+                      sx={{
+                        border: '2px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 0,
+                        p: 3,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'grey.50',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        minHeight: 160,
+                        '&:hover': { bgcolor: 'grey.100', borderColor: 'primary.main' },
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {!card.imageUrl ? (
+                        <>
+                          <AddPhotoAlternateIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                            Browse or take photo
+                          </Typography>
+                          <Stack direction="row" spacing={1}>
+                            <Button variant="outlined" size="small" component="label" startIcon={<AddPhotoAlternateIcon />}>
+                              Browse
+                              <input type="file" hidden accept="image/*" onChange={handleFileChange('front')} />
+                            </Button>
+                            <Button variant="outlined" size="small" startIcon={<CameraAltIcon />} onClick={() => startCamera('front')}>
+                              Take photo
+                            </Button>
+                          </Stack>
+                        </>
+                      ) : (
+                        <Box component="img" src={card.imageUrl} alt="Front" sx={{ width: '100%', borderRadius: 0, objectFit: 'cover', display: 'block' }} />
+                      )}
+                    </Box>
                     {card.imageUrl && (
-                      <Box
-                        component="img"
-                        src={card.imageUrl}
-                        alt="Card"
-                        sx={{
-                          width: '100%',
-                          borderRadius: 2,
-                          objectFit: 'cover',
-                          display: 'block'
-                        }}
-                      />
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        <Button variant="outlined" size="small" startIcon={<RotateRightIcon />} onClick={() => handleRotateDisplayImage('front')} disabled={isRotating}>
+                          {isRotating ? 'Rotating…' : 'Rotate 90°'}
+                        </Button>
+                        <Button variant="outlined" size="small" component="label">Replace (file)<input type="file" hidden accept="image/*" onChange={handleFileChange('front')} /></Button>
+                        <Button variant="outlined" size="small" startIcon={<CameraAltIcon />} onClick={() => startCamera('front')}>Replace (camera)</Button>
+                      </Stack>
                     )}
-                  </Box>
-                  {card.imageUrl && (
-                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ alignSelf: 'center' }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<RotateRightIcon />}
-                        onClick={handleRotateDisplayImage}
-                        disabled={isRotating}
-                      >
-                        {isRotating ? 'Rotating…' : 'Rotate 90°'}
-                      </Button>
-                      <Button variant="outlined" component="label" size="small">
-                        Replace (file)
-                        <input type="file" hidden accept="image/*" onChange={handleFileChange} />
-                      </Button>
-                      <Button variant="outlined" size="small" startIcon={<CameraAltIcon />} onClick={startCamera}>
-                        Replace (camera)
-                      </Button>
-                    </Stack>
+                  </Stack>
+
+                  <Stack spacing={1.5}>
+                    <Typography variant="subtitle2" color="text.secondary" fontWeight={600}>
+                      Back of card
+                    </Typography>
+                    <Box
+                      sx={{
+                        border: '2px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 0,
+                        p: 3,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'grey.50',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        minHeight: 160,
+                        '&:hover': { bgcolor: 'grey.100', borderColor: 'primary.main' },
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {!card.imageUrlBack ? (
+                        <>
+                          <AddPhotoAlternateIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                            Browse or take photo (optional)
+                          </Typography>
+                          <Stack direction="row" spacing={1}>
+                            <Button variant="outlined" size="small" component="label" startIcon={<AddPhotoAlternateIcon />}>
+                              Browse
+                              <input type="file" hidden accept="image/*" onChange={handleFileChange('back')} />
+                            </Button>
+                            <Button variant="outlined" size="small" startIcon={<CameraAltIcon />} onClick={() => startCamera('back')}>
+                              Take photo
+                            </Button>
+                          </Stack>
+                        </>
+                      ) : (
+                        <Box component="img" src={card.imageUrlBack} alt="Back" sx={{ width: '100%', borderRadius: 0, objectFit: 'cover', display: 'block' }} />
+                      )}
+                    </Box>
+                    {card.imageUrlBack && (
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        <Button variant="outlined" size="small" startIcon={<RotateRightIcon />} onClick={() => handleRotateDisplayImage('back')} disabled={isRotating}>
+                          {isRotating ? 'Rotating…' : 'Rotate 90°'}
+                        </Button>
+                        <Button variant="outlined" size="small" component="label">Replace (file)<input type="file" hidden accept="image/*" onChange={handleFileChange('back')} /></Button>
+                        <Button variant="outlined" size="small" startIcon={<CameraAltIcon />} onClick={() => startCamera('back')}>Replace (camera)</Button>
+                      </Stack>
+                    )}
+                  </Stack>
+
+                  {(card.imageUrl || card.imageUrlBack) && (
+                    <Typography variant="caption" color="text.secondary">
+                      After adding front (and optionally back), crop each image and use Apply &amp; Scan. OCR runs on all uploaded sides.
+                    </Typography>
                   )}
                 </Stack>
               </Grid>
@@ -602,6 +661,15 @@ const CardFormPage = () => {
                         label="Email"
                         value={card.email || ''}
                         onChange={handleChange('email')}
+                      />
+                    </Grid>
+                    <Grid size={12}>
+                      <TextField
+                        fullWidth
+                        label="Address"
+                        value={card.address || ''}
+                        onChange={handleChange('address')}
+                        placeholder="Street, city, or full address"
                       />
                     </Grid>
                     <Grid size={12}>

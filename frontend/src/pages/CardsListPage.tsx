@@ -17,6 +17,7 @@ import AddIcon from '@mui/icons-material/Add'
 import BusinessIcon from '@mui/icons-material/Business'
 import PhoneIcon from '@mui/icons-material/Phone'
 import EmailIcon from '@mui/icons-material/Email'
+import LocationOnIcon from '@mui/icons-material/LocationOn'
 import { fetchCards } from '../services/cardApi'
 
 export interface Card {
@@ -25,9 +26,13 @@ export interface Card {
   company?: string
   phone?: string
   email?: string
+  address?: string
   tags?: string[]
   imageUrl?: string
+  imageUrlBack?: string
   notes?: string
+  cloudinaryPublicId?: string
+  cloudinaryPublicIdBack?: string
   createdAt?: string
 }
 
@@ -41,6 +46,7 @@ function filterCards(cards: Card[], query: string, activeTag: string | null) {
       card.company,
       card.phone,
       card.email,
+      card.address,
       ...(card.tags || []),
     ]
       .filter(Boolean)
@@ -120,7 +126,7 @@ const CardsListPage = () => {
         <Stack spacing={2}>
           <TextField
             fullWidth
-            placeholder="Search by name, company, phone, email or tag"
+            placeholder="Search by name, company, phone, email, address or tag"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             InputProps={{
@@ -214,6 +220,12 @@ const CardsListPage = () => {
                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                       <EmailIcon sx={{ fontSize: 18, color: 'text.secondary', opacity: 0.7 }} />
                       {card.email}
+                    </Typography>
+                  )}
+                  {card.address && (
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <LocationOnIcon sx={{ fontSize: 18, color: 'text.secondary', opacity: 0.7 }} />
+                      {card.address}
                     </Typography>
                   )}
                 </Stack>

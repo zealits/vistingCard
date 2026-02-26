@@ -51,3 +51,13 @@ export async function runOcrOnImage(
   return res.data
 }
 
+export async function runOcrOnImages(
+  imageUrls: string[],
+): Promise<Partial<Card>> {
+  if (imageUrls.length === 0) {
+    return {}
+  }
+  const res = await api.post<Partial<Card>>('/cards/ocr', { imageUrls })
+  return res.data
+}
+

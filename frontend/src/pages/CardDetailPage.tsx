@@ -8,6 +8,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import BusinessIcon from '@mui/icons-material/Business'
 import PhoneIcon from '@mui/icons-material/Phone'
 import EmailIcon from '@mui/icons-material/Email'
+import LocationOnIcon from '@mui/icons-material/LocationOn'
 import type { Card as CardType } from './CardsListPage'
 import { deleteCard, fetchCardById } from '../services/cardApi'
 
@@ -71,20 +72,40 @@ const CardDetailPage = () => {
         elevation={0}
       >
         <Box sx={{ flex: '0 0 auto', width: { xs: '100%', md: 340 } }}>
-          {card.imageUrl ? (
-            <Box
-              component="img"
-              src={card.imageUrl}
-              alt={card.name}
-              sx={{ width: '100%', borderRadius: 3, display: 'block', border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}
-            />
-          ) : (
-            <Box sx={{ width: '100%', pt: '66%', bgcolor: 'grey.50', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed', borderColor: 'divider', position: 'relative' }}>
-              <Avatar sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 80, height: 80, bgcolor: 'primary.light', fontSize: '2.5rem' }}>
-                {card.name ? card.name.charAt(0).toUpperCase() : '?'}
-              </Avatar>
-            </Box>
-          )}
+          <Stack spacing={2}>
+            {card.imageUrl ? (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Front
+                </Typography>
+                <Box
+                  component="img"
+                  src={card.imageUrl}
+                  alt={`${card.name} – front`}
+                  sx={{ width: '100%', borderRadius: 0, display: 'block', border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}
+                />
+              </Box>
+            ) : (
+              <Box sx={{ width: '100%', pt: '66%', bgcolor: 'grey.50', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed', borderColor: 'divider', position: 'relative' }}>
+                <Avatar sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 80, height: 80, bgcolor: 'primary.light', fontSize: '2.5rem' }}>
+                  {card.name ? card.name.charAt(0).toUpperCase() : '?'}
+                </Avatar>
+              </Box>
+            )}
+            {card.imageUrlBack && (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
+                  Back
+                </Typography>
+                <Box
+                  component="img"
+                  src={card.imageUrlBack}
+                  alt={`${card.name} – back`}
+                  sx={{ width: '100%', borderRadius: 0, display: 'block', border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}
+                />
+              </Box>
+            )}
+          </Stack>
         </Box>
 
         <Stack spacing={3} flex={1}>
@@ -120,6 +141,16 @@ const CardDetailPage = () => {
                 </Avatar>
                 <Typography variant="body1" sx={{ fontWeight: 500, fontSize: '1.1rem' }}>
                   {card.email}
+                </Typography>
+              </Box>
+            )}
+            {card.address && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ bgcolor: 'success.light', color: 'success.contrastText', width: 44, height: 44 }}>
+                  <LocationOnIcon />
+                </Avatar>
+                <Typography variant="body1" sx={{ fontWeight: 500, fontSize: '1.1rem' }}>
+                  {card.address}
                 </Typography>
               </Box>
             )}

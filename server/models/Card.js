@@ -13,6 +13,8 @@ const cardSchema = new mongoose.Schema(
     tags: { type: [String], default: [] },
     imageUrl: { type: String },
     cloudinaryPublicId: { type: String },
+    imageUrlBack: { type: String },
+    cloudinaryPublicIdBack: { type: String },
   },
   { timestamps: true },
 )

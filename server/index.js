@@ -97,6 +97,13 @@ app.delete('/api/cards/:id', async (req, res) => {
         console.error('Failed to delete Cloudinary image', err)
       }
     }
+    if (card.cloudinaryPublicIdBack) {
+      try {
+        await cloudinary.uploader.destroy(card.cloudinaryPublicIdBack)
+      } catch (err) {
+        console.error('Failed to delete Cloudinary back image', err)
+      }
+    }
     res.status(204).end()
   } catch (err) {
     console.error('Error deleting card', err)
@@ -217,10 +224,39 @@ function extractFieldsFromText(text) {
   }
 }
 
+function mergeOcrResults(results) {
+  const merged = {
+    name: '',
+    company: '',
+    email: '',
+    phone: '',
+    website: '',
+    address: '',
+    notes: '',
+  }
+  const notesParts = []
+  for (const r of results) {
+    if (r.name && !merged.name) merged.name = r.name
+    if (r.company && !merged.company) merged.company = r.company
+    if (r.email && !merged.email) merged.email = r.email
+    if (r.phone && !merged.phone) merged.phone = r.phone
+    if (r.website && !merged.website) merged.website = r.website
+    if (r.address && !merged.address) merged.address = r.address
+    if (r.notes) notesParts.push(r.notes)
+  }
+  merged.notes = notesParts.join('\n\n---\n\n')
+  return merged
+}
+
 app.post('/api/cards/ocr', async (req, res) => {
-  const { imageUrl } = req.body
-  if (!imageUrl) {
-    return res.status(400).json({ message: 'imageUrl is required' })
+  const { imageUrl, imageUrls } = req.body
+  const urls = imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0
+    ? imageUrls
+    : imageUrl
+      ? [imageUrl]
+      : []
+  if (urls.length === 0) {
+    return res.status(400).json({ message: 'imageUrl or imageUrls is required' })
   }
 
   const ocrUrl = process.env.OCR_API_URL
@@ -233,29 +269,31 @@ app.post('/api/cards/ocr', async (req, res) => {
   }
 
   try {
-    // Example for Google Vision API "images:annotate" with API key
-    const ocrResponse = await axios.post(
-      `${ocrUrl}?key=${ocrKey}`,
-      {
-        requests: [
-          {
-            image: {
-              source: { imageUri: imageUrl },
+    const results = []
+    for (const imageUrl of urls) {
+      const ocrResponse = await axios.post(
+        `${ocrUrl}?key=${ocrKey}`,
+        {
+          requests: [
+            {
+              image: {
+                source: { imageUri: imageUrl },
+              },
+              features: [{ type: 'TEXT_DETECTION' }],
             },
-            features: [{ type: 'TEXT_DETECTION' }],
-          },
-        ],
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
+          ],
         },
-      },
-    )
-
-    const rawText =
-      ocrResponse.data?.responses?.[0]?.fullTextAnnotation?.text || ''
-    const fields = extractFieldsFromText(rawText)
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+      const rawText =
+        ocrResponse.data?.responses?.[0]?.fullTextAnnotation?.text || ''
+      results.push(extractFieldsFromText(rawText))
+    }
+    const fields = urls.length > 1 ? mergeOcrResults(results) : results[0]
     res.json(fields)
   } catch (err) {
     console.error('Error calling OCR service', err)
