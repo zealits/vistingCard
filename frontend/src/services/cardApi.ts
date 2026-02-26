@@ -107,3 +107,33 @@ export async function runOcrOnImages(
   return res.data
 }
 
+// Industries (public list; create/update/delete require auth)
+export interface Industry {
+  _id: string
+  label: string
+  order?: number
+  icon?: string
+  color?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export async function fetchIndustries(): Promise<Industry[]> {
+  const res = await api.get<Industry[]>('/industries')
+  return res.data
+}
+
+export async function createIndustry(data: { label: string; order?: number; icon?: string; color?: string }): Promise<Industry> {
+  const res = await api.post<Industry>('/industries', data, { headers: authHeaders() })
+  return res.data
+}
+
+export async function updateIndustry(id: string, data: Partial<{ label: string; order: number; icon: string; color: string }>): Promise<Industry> {
+  const res = await api.patch<Industry>(`/industries/${id}`, data, { headers: authHeaders() })
+  return res.data
+}
+
+export async function deleteIndustry(id: string): Promise<void> {
+  await api.delete(`/industries/${id}`, { headers: authHeaders() })
+}
+

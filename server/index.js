@@ -10,6 +10,7 @@ const cloudinary = require('cloudinary').v2
 const axios = require('axios')
 const Card = require('./models/Card')
 const PendingChange = require('./models/PendingChange')
+const Industry = require('./models/Industry')
 
 const app = express()
 // Dashboard auth: set ADMIN_USERNAME, ADMIN_PASSWORD, JWT_SECRET in production
@@ -42,10 +43,32 @@ app.use(express.json())
 const PORT = process.env.PORT || 5070
 const MONGODB_URI = process.env.MONGODB_URI
 
+const DEFAULT_INDUSTRIES = [
+  'Manufacturing & Industrial',
+  'Real Estate & Construction',
+  'IT & Technology',
+  'FMCG & Agro-tech',
+  'Lifestyle & Consumer Goods',
+  'Services & Finance',
+  'Hospitality & Tourism',
+  'Health & Wellness',
+  'Import-Export',
+]
+
+async function seedIndustriesIfEmpty() {
+  const count = await Industry.countDocuments()
+  if (count > 0) return
+  await Industry.insertMany(
+    DEFAULT_INDUSTRIES.map((label, i) => ({ label, order: i }))
+  )
+  console.log('Seeded default industries')
+}
+
 mongoose
   .connect(MONGODB_URI)
   .then(() => {
     console.log('Connected to MongoDB')
+    return seedIndustriesIfEmpty()
   })
   .catch((err) => {
     console.error('MongoDB connection error', err)
@@ -125,6 +148,66 @@ app.put('/api/cards/:id', async (req, res) => {
   } catch (err) {
     console.error('Error updating card', err)
     res.status(400).json({ message: 'Failed to update card' })
+  }
+})
+
+// Industries: public list, dashboard-only write
+app.get('/api/industries', async (req, res) => {
+  try {
+    const list = await Industry.find().sort({ order: 1, label: 1 }).lean()
+    res.json(list)
+  } catch (err) {
+    console.error('Error fetching industries', err)
+    res.status(500).json({ message: 'Failed to fetch industries' })
+  }
+})
+
+app.post('/api/industries', requireAuth, async (req, res) => {
+  try {
+    const { label, order, icon, color } = req.body || {}
+    if (!label || typeof label !== 'string' || !label.trim()) {
+      return res.status(400).json({ message: 'label is required' })
+    }
+    const maxOrder = await Industry.findOne().sort({ order: -1 }).select('order').lean()
+    const orderNum = typeof order === 'number' ? order : (maxOrder?.order ?? -1) + 1
+    const industry = await Industry.create({
+      label: label.trim(),
+      order: orderNum,
+      ...(icon != null && { icon: String(icon).trim() }),
+      ...(color != null && { color: String(color).trim() }),
+    })
+    res.status(201).json(industry)
+  } catch (err) {
+    console.error('Error creating industry', err)
+    res.status(400).json({ message: 'Failed to create industry' })
+  }
+})
+
+app.patch('/api/industries/:id', requireAuth, async (req, res) => {
+  try {
+    const { label, order, icon, color } = req.body || {}
+    const update = {}
+    if (typeof label === 'string') update.label = label.trim()
+    if (typeof order === 'number') update.order = order
+    if (icon !== undefined) update.icon = icon == null ? undefined : String(icon).trim()
+    if (color !== undefined) update.color = color == null ? undefined : String(color).trim()
+    const industry = await Industry.findByIdAndUpdate(req.params.id, update, { new: true })
+    if (!industry) return res.status(404).json({ message: 'Industry not found' })
+    res.json(industry)
+  } catch (err) {
+    console.error('Error updating industry', err)
+    res.status(400).json({ message: 'Failed to update industry' })
+  }
+})
+
+app.delete('/api/industries/:id', requireAuth, async (req, res) => {
+  try {
+    const industry = await Industry.findByIdAndDelete(req.params.id)
+    if (!industry) return res.status(404).json({ message: 'Industry not found' })
+    res.status(204).end()
+  } catch (err) {
+    console.error('Error deleting industry', err)
+    res.status(500).json({ message: 'Failed to delete industry' })
   }
 })
 

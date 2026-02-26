@@ -9,6 +9,8 @@ import {
   Chip,
   Avatar,
   Divider,
+  TextField,
+  IconButton,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
@@ -16,8 +18,16 @@ import EditIcon from '@mui/icons-material/Edit'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import LogoutIcon from '@mui/icons-material/Logout'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import type { PendingChange } from '../services/cardApi'
-import { fetchPendingChanges, applyPendingChange } from '../services/cardApi'
+import AddIcon from '@mui/icons-material/Add'
+import CategoryIcon from '@mui/icons-material/Category'
+import type { PendingChange, Industry } from '../services/cardApi'
+import {
+  fetchPendingChanges,
+  applyPendingChange,
+  fetchIndustries,
+  createIndustry,
+  deleteIndustry,
+} from '../services/cardApi'
 import { getAuthToken, clearAuthToken } from '../services/auth'
 import type { Card } from './CardsListPage'
 
@@ -48,6 +58,10 @@ const DashboardPage = () => {
   const [pending, setPending] = useState<PendingChange[]>([])
   const [loading, setLoading] = useState(true)
   const [applyingId, setApplyingId] = useState<string | null>(null)
+  const [industries, setIndustries] = useState<Industry[]>([])
+  const [newIndustryLabel, setNewIndustryLabel] = useState('')
+  const [addingIndustry, setAddingIndustry] = useState(false)
+  const [deletingIndustryId, setDeletingIndustryId] = useState<string | null>(null)
 
   const loadPending = useCallback(() => {
     if (!getAuthToken()) {
@@ -68,13 +82,20 @@ const DashboardPage = () => {
       .finally(() => setLoading(false))
   }, [navigate, location])
 
+  const loadIndustries = useCallback(() => {
+    fetchIndustries()
+      .then(setIndustries)
+      .catch((err) => console.error('Failed to load industries', err))
+  }, [])
+
   useEffect(() => {
     if (!getAuthToken()) {
       navigate('/aiiventure/login', { state: { from: { pathname: '/aiiventure/dashboard' } }, replace: true })
       return
     }
     loadPending()
-  }, [navigate, loadPending])
+    loadIndustries()
+  }, [navigate, loadPending, loadIndustries])
 
   const handleApply = async (changeId: string) => {
     setApplyingId(changeId)
@@ -96,6 +117,33 @@ const DashboardPage = () => {
   const handleLogout = () => {
     clearAuthToken()
     navigate('/aiiventure/login', { replace: true })
+  }
+
+  const handleAddIndustry = async () => {
+    const label = newIndustryLabel.trim()
+    if (!label) return
+    setAddingIndustry(true)
+    try {
+      const created = await createIndustry({ label })
+      setIndustries((prev) => [...prev, created].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)))
+      setNewIndustryLabel('')
+    } catch (err) {
+      console.error('Failed to add industry', err)
+    } finally {
+      setAddingIndustry(false)
+    }
+  }
+
+  const handleDeleteIndustry = async (id: string) => {
+    setDeletingIndustryId(id)
+    try {
+      await deleteIndustry(id)
+      setIndustries((prev) => prev.filter((i) => i._id !== id))
+    } catch (err) {
+      console.error('Failed to delete industry', err)
+    } finally {
+      setDeletingIndustryId(null)
+    }
   }
 
   const pendingDeletes = pending.filter((p) => p.type === 'delete')
@@ -120,6 +168,65 @@ const DashboardPage = () => {
           Logout
         </Button>
       </Box>
+
+      <Box>
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CategoryIcon color="primary" /> Industry types
+        </Typography>
+        <Typography color="text.secondary" sx={{ mb: 2 }}>
+          Industries shown in the Add Card form and on the contacts list. Add new options here; they appear everywhere.
+        </Typography>
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+          <TextField
+            size="small"
+            placeholder="New industry label"
+            value={newIndustryLabel}
+            onChange={(e) => setNewIndustryLabel(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddIndustry()}
+            sx={{ minWidth: 260 }}
+          />
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleAddIndustry}
+            disabled={!newIndustryLabel.trim() || addingIndustry}
+          >
+            {addingIndustry ? 'Adding…' : 'Add industry'}
+          </Button>
+        </Stack>
+        <Stack spacing={1}>
+          {industries.map((ind) => (
+            <Paper
+              key={ind._id}
+              elevation={0}
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+              }}
+            >
+              <Typography variant="body1" sx={{ flex: 1, fontWeight: 500 }}>
+                {ind.label}
+              </Typography>
+              <IconButton
+                size="small"
+                color="error"
+                aria-label="Delete industry"
+                onClick={() => handleDeleteIndustry(ind._id)}
+                disabled={deletingIndustryId === ind._id}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Paper>
+          ))}
+        </Stack>
+      </Box>
+
+      <Divider />
 
       <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.02em' }}>
         Pending changes

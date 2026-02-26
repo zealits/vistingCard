@@ -4,6 +4,7 @@ const cardSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     company: { type: String },
+    industryType: { type: String },
     jobTitle: { type: String },
     phone: { type: String },
     email: { type: String },

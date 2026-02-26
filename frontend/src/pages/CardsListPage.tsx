@@ -18,12 +18,16 @@ import BusinessIcon from '@mui/icons-material/Business'
 import PhoneIcon from '@mui/icons-material/Phone'
 import EmailIcon from '@mui/icons-material/Email'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
-import { fetchCards } from '../services/cardApi'
+import CategoryIcon from '@mui/icons-material/Category'
+import { fetchCards, fetchIndustries } from '../services/cardApi'
+import type { Industry } from '../services/cardApi'
+import { INDUSTRY_OPTIONS, getIndustryColor, getIndustryIcon } from '../constants/industries'
 
 export interface Card {
   _id: string
   name: string
   company?: string
+  industryType?: string
   phone?: string
   email?: string
   address?: string
@@ -36,14 +40,21 @@ export interface Card {
   createdAt?: string
 }
 
-function filterCards(cards: Card[], query: string, activeTag: string | null) {
+function filterCards(
+  cards: Card[],
+  query: string,
+  activeTag: string | null,
+  activeIndustry: string | null
+) {
   const q = query.toLowerCase().trim()
   return cards.filter((card) => {
     if (activeTag && !(card.tags || []).includes(activeTag)) return false
+    if (activeIndustry && card.industryType !== activeIndustry) return false
     if (!q) return true
     const haystack = [
       card.name,
       card.company,
+      card.industryType,
       card.phone,
       card.email,
       card.address,
@@ -58,8 +69,10 @@ function filterCards(cards: Card[], query: string, activeTag: string | null) {
 
 const CardsListPage = () => {
   const [cards, setCards] = useState<Card[]>([])
+  const [industries, setIndustries] = useState<Industry[]>([])
   const [search, setSearch] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [activeIndustry, setActiveIndustry] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCards()
@@ -69,11 +82,17 @@ const CardsListPage = () => {
       })
   }, [])
 
+  useEffect(() => {
+    fetchIndustries()
+      .then(setIndustries)
+      .catch(() => setIndustries(INDUSTRY_OPTIONS.map((label, order) => ({ _id: label, label, order }))))
+  }, [])
+
   const allTags = Array.from(
     new Set(cards.flatMap((c) => c.tags || [])),
   ).sort((a, b) => a.localeCompare(b))
 
-  const visibleCards = filterCards(cards, search, activeTag)
+  const visibleCards = filterCards(cards, search, activeTag, activeIndustry)
 
   return (
     <Stack spacing={4}>
@@ -138,6 +157,101 @@ const CardsListPage = () => {
               sx: { bgcolor: 'background.paper', borderRadius: 3 }
             }}
           />
+
+          <Box
+            sx={{
+              overflowX: 'auto',
+              pb: 0.5,
+              scrollbarWidth: 'thin',
+              scrollbarColor: (theme) => `${theme.palette.primary.main} ${theme.palette.grey[200]}`,
+              '&::-webkit-scrollbar': { height: 8 },
+              '&::-webkit-scrollbar-track': {
+                bgcolor: 'grey.200',
+                borderRadius: 4,
+              },
+              '&::-webkit-scrollbar-thumb': {
+                bgcolor: 'primary.main',
+                borderRadius: 4,
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                },
+              },
+            }}
+          >
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{
+                flexWrap: 'nowrap',
+                minWidth: 'max-content',
+                alignItems: 'center',
+              }}
+            >
+              <Button
+                variant={activeIndustry === null ? 'contained' : 'outlined'}
+                size="medium"
+                onClick={() => setActiveIndustry(null)}
+                startIcon={<CategoryIcon />}
+                sx={{
+                  borderRadius: 10,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  flexShrink: 0,
+                  borderWidth: 1.5,
+                  px: 2,
+                }}
+              >
+                All
+              </Button>
+              {(industries.length ? industries : INDUSTRY_OPTIONS.map((label, i) => ({ _id: label, label, order: i }))).map((ind) => {
+                const label = typeof ind === 'string' ? ind : ind.label
+                const Icon = getIndustryIcon(label) ?? CategoryIcon
+                const color = getIndustryColor(label)
+                const selected = activeIndustry === label
+                return (
+                  <Button
+                    key={typeof ind === 'string' ? label : ind._id}
+                    variant="outlined"
+                    size="medium"
+                    onClick={() => setActiveIndustry((prev) => (prev === label ? null : label))}
+                    startIcon={
+                      <Box
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            bgcolor: selected ? color : `${color}20`,
+                            color: selected ? 'white' : color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Icon sx={{ fontSize: 18 }} />
+                        </Box>
+                    }
+                    sx={{
+                      borderRadius: 10,
+                      textTransform: 'none',
+                      fontWeight: selected ? 600 : 500,
+                      flexShrink: 0,
+                      borderColor: selected ? color : 'divider',
+                      borderWidth: selected ? 2 : 1,
+                      color: selected ? color : 'text.primary',
+                      bgcolor: selected ? `${color}12` : 'background.paper',
+                      px: 2,
+                      '&:hover': {
+                        borderColor: color,
+                        bgcolor: `${color}18`,
+                      },
+                    }}
+                  >
+                    {label}
+                  </Button>
+                )
+              })}
+            </Stack>
+          </Box>
 
           {allTags.length > 0 && (
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ rowGap: 1 }}>
@@ -205,6 +319,11 @@ const CardsListPage = () => {
                       {card.company}
                     </Typography>
                   )}
+                  {card.industryType && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.25, display: 'block' }} noWrap>
+                      {card.industryType}
+                    </Typography>
+                  )}
                 </Box>
               </Box>
 
@@ -252,10 +371,12 @@ const CardsListPage = () => {
           <Grid size={12}>
             <Box sx={{ textAlign: 'center', py: 8, px: 2, bgcolor: 'background.paper', borderRadius: 4, border: '1px dashed', borderColor: 'divider' }}>
               <Typography variant="h6" color="text.primary" sx={{ mb: 1 }}>
-                No cards found
+                {activeIndustry ? 'No business cards in this industry' : 'No cards found'}
               </Typography>
               <Typography color="text.secondary">
-                Try adjusting your search or add a new visiting card to your vault.
+                {activeIndustry
+                  ? `No contacts with industry "${activeIndustry}". Try another industry or clear the filter.`
+                  : 'Try adjusting your search or add a new visiting card to your vault.'}
               </Typography>
             </Box>
           </Grid>

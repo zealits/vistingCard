@@ -124,6 +124,11 @@ const CardDetailPage = () => {
                 {card.company}
               </Typography>
             )}
+            {card.industryType && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontWeight: 500 }}>
+                {card.industryType}
+              </Typography>
+            )}
           </Box>
 
           <Divider />

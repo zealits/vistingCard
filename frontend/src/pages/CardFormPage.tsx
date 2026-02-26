@@ -4,8 +4,12 @@ import {
   Box,
   Button,
   Chip,
+  FormControl,
   Grid,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   TextField,
   Typography,
@@ -32,15 +36,25 @@ import {
   runOcrOnImages,
 } from '../services/cardApi'
 import { getCroppedBlob } from '../utils/imageCrop'
+import { fetchIndustries } from '../services/cardApi'
+import { INDUSTRY_OPTIONS } from '../constants/industries'
 
 const CardFormPage = () => {
   const { id } = useParams()
   const isEdit = Boolean(id)
   const navigate = useNavigate()
 
+  const [industryOptions, setIndustryOptions] = useState<string[]>([])
+  useEffect(() => {
+    fetchIndustries()
+      .then((list) => setIndustryOptions(list.map((i) => i.label)))
+      .catch(() => setIndustryOptions([...INDUSTRY_OPTIONS]))
+  }, [])
+
   const [card, setCard] = useState<Partial<CardType>>({
     name: '',
     company: '',
+    industryType: '',
     phone: '',
     email: '',
     address: '',
@@ -76,9 +90,13 @@ const CardFormPage = () => {
   }, [id, isEdit])
 
   const handleChange =
-    (field: keyof CardType) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    (field: keyof CardType) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setCard((prev) => ({ ...prev, [field]: e.target.value }))
     }
+
+  const handleIndustryChange = (e: { target: { value: string } }) => {
+    setCard((prev) => ({ ...prev, industryType: e.target.value || undefined }))
+  }
 
   const handleAddTag = () => {
     const trimmed = newTag.trim()
@@ -668,6 +686,27 @@ const CardFormPage = () => {
                         value={card.company || ''}
                         onChange={handleChange('company')}
                       />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <FormControl fullWidth>
+                        <InputLabel id="industry-type-label">Industry type</InputLabel>
+                        <Select
+                          labelId="industry-type-label"
+                          id="industry-type"
+                          value={card.industryType || ''}
+                          label="Industry type"
+                          onChange={handleIndustryChange}
+                        >
+                          <MenuItem value="">
+                            <em>None</em>
+                          </MenuItem>
+                          {(industryOptions.length ? industryOptions : [...INDUSTRY_OPTIONS]).map((opt) => (
+                            <MenuItem key={opt} value={opt}>
+                              {opt}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
