@@ -6,6 +6,7 @@ import CardFormPage from './pages/CardFormPage'
 import CardDetailPage from './pages/CardDetailPage'
 import DashboardPage from './pages/DashboardPage'
 import DashboardLoginPage from './pages/DashboardLoginPage'
+import { isAuthenticated } from './services/auth'
 
 function App() {
   return (
@@ -31,9 +32,11 @@ function App() {
               style={{ height: 80, width: 'auto', display: 'block' }}
             />
           </a>
-          <Button component={RouterLink} to="/aiiventure/dashboard" color="inherit" sx={{ fontWeight: 600 }}>
-            Dashboard
-          </Button>
+          {isAuthenticated() && (
+            <Button component={RouterLink} to="/aiiventure/dashboard" color="inherit" sx={{ fontWeight: 600 }}>
+              Dashboard
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
       <Container
