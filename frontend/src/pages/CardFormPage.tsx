@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Box,
   Button,
-  Chip,
   FormControl,
   Grid,
   InputLabel,
@@ -56,11 +55,11 @@ const CardFormPage = () => {
     industryType: '',
     phone: '',
     email: '',
+    website: '',
     address: '',
     notes: '',
     tags: [],
   })
-  const [newTag, setNewTag] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
@@ -95,23 +94,6 @@ const CardFormPage = () => {
 
   const handleIndustryChange = (e: { target: { value: string } }) => {
     setCard((prev) => ({ ...prev, industryType: e.target.value || undefined }))
-  }
-
-  const handleAddTag = () => {
-    const trimmed = newTag.trim()
-    if (!trimmed) return
-    setCard((prev) => ({
-      ...prev,
-      tags: Array.from(new Set([...(prev.tags || []), trimmed])),
-    }))
-    setNewTag('')
-  }
-
-  const handleRemoveTag = (tag: string) => {
-    setCard((prev) => ({
-      ...prev,
-      tags: (prev.tags || []).filter((t) => t !== tag),
-    }))
   }
 
   const handleFileChange = (side: 'front' | 'back') => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -723,6 +705,15 @@ const CardFormPage = () => {
                         onChange={handleChange('email')}
                       />
                     </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <TextField
+                        fullWidth
+                        label="Website"
+                        value={card.website || ''}
+                        onChange={handleChange('website')}
+                        placeholder="https://"
+                      />
+                    </Grid>
                     <Grid size={12}>
                       <TextField
                         fullWidth
@@ -743,31 +734,6 @@ const CardFormPage = () => {
                       />
                     </Grid>
                   </Grid>
-
-                  <Stack spacing={1.5}>
-                    <Stack direction="row" spacing={1}>
-                      <TextField
-                        label="Add tag"
-                        value={newTag}
-                        onChange={(e) => setNewTag(e.target.value)}
-                        size="small"
-                        sx={{ flexGrow: 1 }}
-                      />
-                      <Button variant="contained" onClick={handleAddTag}>
-                        Add
-                      </Button>
-                    </Stack>
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
-                      {(card.tags || []).map((tag) => (
-                        <Chip
-                          key={tag}
-                          label={tag}
-                          onDelete={() => handleRemoveTag(tag)}
-                          sx={{ mb: 1 }}
-                        />
-                      ))}
-                    </Stack>
-                  </Stack>
                 </Stack>
               </Grid>
             </Grid>

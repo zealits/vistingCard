@@ -30,6 +30,7 @@ export interface Card {
   industryType?: string
   phone?: string
   email?: string
+  website?: string
   address?: string
   tags?: string[]
   imageUrl?: string
@@ -57,6 +58,7 @@ function filterCards(
       card.industryType,
       card.phone,
       card.email,
+      card.website,
       card.address,
       ...(card.tags || []),
     ]
@@ -145,7 +147,7 @@ const CardsListPage = () => {
         <Stack spacing={2}>
           <TextField
             fullWidth
-            placeholder="Search by name, company, phone, email, address or tag"
+            placeholder="Search by name, company, phone, email, website, address or tag"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             InputProps={{

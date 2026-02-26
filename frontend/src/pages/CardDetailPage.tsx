@@ -154,6 +154,23 @@ const CardDetailPage = () => {
                 </Typography>
               </Box>
             )}
+            {card.website && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ bgcolor: 'info.light', color: 'info.contrastText', width: 44, height: 44 }}>
+                  <LinkIcon />
+                </Avatar>
+                <Typography
+                  variant="body1"
+                  component="a"
+                  href={card.website.startsWith('http') ? card.website : `https://${card.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ fontWeight: 500, fontSize: '1.1rem', color: 'primary.main', textDecoration: 'underline' }}
+                >
+                  {card.website}
+                </Typography>
+              </Box>
+            )}
             {card.address && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Avatar sx={{ bgcolor: 'success.light', color: 'success.contrastText', width: 44, height: 44 }}>
