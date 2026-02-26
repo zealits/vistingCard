@@ -198,7 +198,7 @@ const CardFormPage = () => {
             </Typography>
 
             <Grid container spacing={5}>
-              <Grid item xs={12} md={5}>
+              <Grid size={{ xs: 12, md: 5 }}>
                 <Stack spacing={2}>
                   <Box
                     component="label"
@@ -258,10 +258,10 @@ const CardFormPage = () => {
                 </Stack>
               </Grid>
 
-              <Grid item xs={12} md={7}>
+              <Grid size={{ xs: 12, md: 7 }}>
                 <Stack spacing={3}>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         required
                         fullWidth
@@ -270,7 +270,7 @@ const CardFormPage = () => {
                         onChange={handleChange('name')}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         fullWidth
                         label="Company"
@@ -278,7 +278,7 @@ const CardFormPage = () => {
                         onChange={handleChange('company')}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         fullWidth
                         label="Phone"
@@ -286,7 +286,7 @@ const CardFormPage = () => {
                         onChange={handleChange('phone')}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         fullWidth
                         label="Email"
@@ -294,7 +294,7 @@ const CardFormPage = () => {
                         onChange={handleChange('email')}
                       />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={12}>
                       <TextField
                         fullWidth
                         label="Notes (full text from card)"

@@ -155,7 +155,7 @@ const CardsListPage = () => {
 
       <Grid container spacing={3}>
         {visibleCards.map((card) => (
-          <Grid item xs={12} sm={6} md={4} key={card._id}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={card._id}>
             <Paper
               component={RouterLink}
               to={`/cards/${card._id}`}
@@ -237,7 +237,7 @@ const CardsListPage = () => {
           </Grid>
         ))}
         {visibleCards.length === 0 && (
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Box sx={{ textAlign: 'center', py: 8, px: 2, bgcolor: 'background.paper', borderRadius: 4, border: '1px dashed', borderColor: 'divider' }}>
               <Typography variant="h6" color="text.primary" sx={{ mb: 1 }}>
                 No cards found
