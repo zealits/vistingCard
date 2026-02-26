@@ -19,6 +19,7 @@ import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
+import CameraswitchIcon from '@mui/icons-material/Cameraswitch'
 import type { Card as CardType } from './CardsListPage'
 import {
   createCard,
@@ -53,6 +54,8 @@ const CardFormPage = () => {
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [cameraDialogOpen, setCameraDialogOpen] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user')
+  const [cameraSwitching, setCameraSwitching] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
@@ -101,22 +104,25 @@ const CardFormPage = () => {
 
   const startCamera = () => {
     setCameraError(null)
+    setCameraFacingMode('user')
     setCameraDialogOpen(true)
   }
 
-  const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
-    ;(videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el
-    if (!el) {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop())
-        streamRef.current = null
-      }
-      return
+  const requestAndAttachStream = useCallback((facing: 'user' | 'environment') => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
     }
-    if (!cameraDialogOpen || streamRef.current) return
+    const video = videoRef.current
+    if (!video) return
+    setCameraError(null)
     navigator.mediaDevices
       .getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: {
+          facingMode: facing,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
         audio: false,
       })
       .then((stream) => {
@@ -125,15 +131,68 @@ const CardFormPage = () => {
           return
         }
         streamRef.current = stream
-        el.srcObject = stream
-        el.onloadedmetadata = () => el.play().catch(() => {})
+        videoRef.current.srcObject = stream
+        videoRef.current.onloadedmetadata = () => videoRef.current?.play().catch(() => {})
+        setCameraSwitching(false)
       })
       .catch((err) => {
         setCameraError(
           err instanceof Error ? err.message : 'Could not access camera. Please allow camera permission.'
         )
+        setCameraSwitching(false)
       })
-  }, [cameraDialogOpen])
+  }, [])
+
+  const setVideoRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      ;(videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el
+      if (!el) {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop())
+          streamRef.current = null
+        }
+        return
+      }
+      if (!cameraDialogOpen || streamRef.current) return
+      requestAndAttachStream(cameraFacingMode)
+    },
+    [cameraDialogOpen, cameraFacingMode, requestAndAttachStream]
+  )
+
+  const switchCamera = () => {
+    const next = cameraFacingMode === 'user' ? 'environment' : 'user'
+    const previous = cameraFacingMode
+    setCameraFacingMode(next)
+    setCameraSwitching(true)
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+    const video = videoRef.current
+    if (!video) return
+    navigator.mediaDevices
+      .getUserMedia({
+        video: { facingMode: next, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      })
+      .then((stream) => {
+        if (!videoRef.current) {
+          stream.getTracks().forEach((t) => t.stop())
+          return
+        }
+        streamRef.current = stream
+        videoRef.current.srcObject = stream
+        videoRef.current.onloadedmetadata = () => videoRef.current?.play().catch(() => {})
+        setCameraFacingMode(next)
+        setCameraSwitching(false)
+      })
+      .catch(() => {
+        setCameraError('Could not switch camera. This device may only have one camera.')
+        setCameraFacingMode(previous)
+        setCameraSwitching(false)
+        requestAndAttachStream(previous)
+      })
+  }
 
   useEffect(() => {
     if (!cameraDialogOpen && streamRef.current) {
@@ -149,6 +208,7 @@ const CardFormPage = () => {
     }
     setCameraDialogOpen(false)
     setCameraError(null)
+    setCameraSwitching(false)
   }
 
   const handleCapturePhoto = () => {
@@ -291,9 +351,22 @@ const CardFormPage = () => {
             </Typography>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions sx={{ px: 3, pb: 2, flexWrap: 'wrap', gap: 1 }}>
           <Button onClick={stopCamera}>Cancel</Button>
-          <Button variant="contained" startIcon={<CameraAltIcon />} onClick={handleCapturePhoto}>
+          <Button
+            variant="outlined"
+            startIcon={<CameraswitchIcon />}
+            onClick={switchCamera}
+            disabled={cameraSwitching}
+          >
+            {cameraSwitching ? 'Switching…' : 'Switch camera'}
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<CameraAltIcon />}
+            onClick={handleCapturePhoto}
+            disabled={cameraSwitching}
+          >
             Capture
           </Button>
         </DialogActions>
