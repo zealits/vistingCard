@@ -30,7 +30,6 @@ import type { Card as CardType } from './CardsListPage'
 import {
   createCard,
   fetchCardById,
-  updateCard,
   scheduleEdit,
   uploadCardImage,
   runOcrOnImages,
