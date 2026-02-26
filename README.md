@@ -48,7 +48,7 @@ cd frontend
 npm install
 ```
 
-Configure the API base URL in the frontend (e.g. in env or axios config) to point to your backend (e.g. `http://localhost:5000`).
+Configure the API base URL in the frontend (e.g. in env or axios config) to point to your backend (e.g. `http://localhost:5070`).
 
 ## Run
 
