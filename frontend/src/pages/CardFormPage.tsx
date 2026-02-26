@@ -14,9 +14,8 @@ import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
-import Slider from '@mui/material/Slider'
-import Cropper from 'react-easy-crop'
-import type { Area } from 'react-easy-crop'
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import CameraAltIcon from '@mui/icons-material/CameraAlt'
 import CameraswitchIcon from '@mui/icons-material/Cameraswitch'
@@ -48,9 +47,8 @@ const CardFormPage = () => {
   const [isScanning, setIsScanning] = useState(false)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
   const [imageSrc, setImageSrc] = useState<string | null>(null)
-  const [crop, setCrop] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
+  const [crop, setCrop] = useState<Crop | undefined>(undefined)
+  const [imageNaturalSize, setImageNaturalSize] = useState<{ width: number; height: number } | null>(null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [cameraDialogOpen, setCameraDialogOpen] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
@@ -234,18 +232,62 @@ const CardFormPage = () => {
     )
   }
 
-  const onCropComplete = (_: Area, croppedPixels: Area) => {
-    setCroppedAreaPixels(croppedPixels)
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth, naturalHeight } = e.currentTarget
+    setImageNaturalSize({ width: naturalWidth, height: naturalHeight })
+    setCrop(
+      centerCrop(
+        makeAspectCrop({ unit: '%', width: 90 }, naturalWidth / naturalHeight, naturalWidth, naturalHeight),
+        naturalWidth,
+        naturalHeight
+      )
+    )
   }
 
+  const rotateImage = useCallback(() => {
+    if (!imageSrc || !imageNaturalSize) return
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const { width, height } = imageNaturalSize
+      const canvas = document.createElement('canvas')
+      canvas.width = height
+      canvas.height = width
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      // 90° clockwise: swap width/height, setTransform then draw
+      ctx.setTransform(0, 1, -1, 0, height, 0)
+      ctx.drawImage(img, 0, 0)
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+      setImageSrc(dataUrl)
+      setImageNaturalSize({ width: height, height: width })
+      setCrop(undefined)
+    }
+    img.src = imageSrc
+  }, [imageSrc, imageNaturalSize])
+
   const handleApplyCropAndScan = async () => {
-    if (!imageSrc || !croppedAreaPixels) {
+    if (!imageSrc || !crop || !imageNaturalSize) {
+      setCropDialogOpen(false)
+      return
+    }
+    const pixelCrop =
+      crop.unit === '%'
+        ? {
+            x: (crop.x / 100) * imageNaturalSize.width,
+            y: (crop.y / 100) * imageNaturalSize.height,
+            width: (crop.width / 100) * imageNaturalSize.width,
+            height: (crop.height / 100) * imageNaturalSize.height,
+          }
+        : { x: crop.x, y: crop.y, width: crop.width, height: crop.height }
+    if (pixelCrop.width < 1 || pixelCrop.height < 1) {
       setCropDialogOpen(false)
       return
     }
     try {
       setIsScanning(true)
-      const blob = await getCroppedBlob(imageSrc, croppedAreaPixels)
+      const blob = await getCroppedBlob(imageSrc, pixelCrop)
       const croppedFile = new File([blob], pendingFile?.name || 'card.jpg', {
         type: 'image/jpeg',
       })
@@ -298,33 +340,44 @@ const CardFormPage = () => {
             position: 'relative',
             width: '100%',
             height: 400,
-            bgcolor: 'black',
+            bgcolor: 'grey.900',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           {imageSrc && (
-            <Cropper
-              image={imageSrc}
+            <ReactCrop
               crop={crop}
-              zoom={zoom}
-              aspect={3 / 2}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={onCropComplete}
-            />
+              onChange={(_, percentCrop) => setCrop(percentCrop)}
+              aspect={undefined}
+              style={{ maxHeight: 360 }}
+            >
+              <img
+                src={imageSrc}
+                alt="Card to crop"
+                onLoad={onImageLoad}
+                style={{ maxHeight: 360, width: 'auto', height: 'auto' }}
+              />
+            </ReactCrop>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Box sx={{ flexGrow: 1, mr: 3 }}>
-            <Slider
-              min={1}
-              max={3}
-              step={0.1}
-              value={zoom}
-              onChange={(_, value) => setZoom(value as number)}
-            />
-          </Box>
+        <DialogActions sx={{ px: 3, pb: 2, flexWrap: 'wrap', gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={rotateImage}
+            disabled={!imageSrc || !imageNaturalSize}
+          >
+            Rotate 90°
+          </Button>
+          <Box sx={{ flexGrow: 1 }} />
           <Button onClick={() => setCropDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleApplyCropAndScan}>
+          <Button
+            variant="contained"
+            onClick={handleApplyCropAndScan}
+            disabled={!crop || !imageNaturalSize}
+          >
             Apply & Scan
           </Button>
         </DialogActions>
