@@ -55,8 +55,12 @@ jobs:
           echo "🔐 Starting deployment to remote server"
 
           if [ -f ~/visitingCard/server/.env ]; then
-            echo "📁 Backing up existing .env file"
+            echo "📁 Backing up existing server .env file"
             cp ~/visitingCard/server/.env ~/.env.bak
+          fi
+          if [ -f ~/visitingCard/frontend/.env ]; then
+            echo "📁 Backing up existing frontend .env file"
+            cp ~/visitingCard/frontend/.env ~/.env.frontend.bak
           fi
 
           if [ -d ~/visitingCard ]; then
@@ -71,8 +75,12 @@ jobs:
           fi
 
           if [ -f ~/.env.bak ]; then
-            echo "♻️ Restoring .env from backup"
+            echo "♻️ Restoring server .env from backup"
             mv ~/.env.bak ~/visitingCard/server/.env
+          fi
+          if [ -f ~/.env.frontend.bak ]; then
+            echo "♻️ Restoring frontend .env from backup"
+            mv ~/.env.frontend.bak ~/visitingCard/frontend/.env
           fi
 
           echo "📦 Installing server dependencies"
