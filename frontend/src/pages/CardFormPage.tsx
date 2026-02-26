@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Box,
   Button,
@@ -99,30 +99,46 @@ const CardFormPage = () => {
     reader.readAsDataURL(file)
   }
 
-  const startCamera = async () => {
+  const startCamera = () => {
     setCameraError(null)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      })
-      streamRef.current = stream
-      setCameraDialogOpen(true)
-    } catch (err) {
-      setCameraError(
-        err instanceof Error ? err.message : 'Could not access camera. Please allow camera permission.'
-      )
-    }
+    setCameraDialogOpen(true)
   }
 
+  const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    ;(videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el
+    if (!el) {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+      }
+      return
+    }
+    if (!cameraDialogOpen || streamRef.current) return
+    navigator.mediaDevices
+      .getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      })
+      .then((stream) => {
+        if (!videoRef.current) {
+          stream.getTracks().forEach((t) => t.stop())
+          return
+        }
+        streamRef.current = stream
+        el.srcObject = stream
+        el.onloadedmetadata = () => el.play().catch(() => {})
+      })
+      .catch((err) => {
+        setCameraError(
+          err instanceof Error ? err.message : 'Could not access camera. Please allow camera permission.'
+        )
+      })
+  }, [cameraDialogOpen])
+
   useEffect(() => {
-    if (!cameraDialogOpen || !streamRef.current || !videoRef.current) return
-    const video = videoRef.current
-    const stream = streamRef.current
-    video.srcObject = stream
-    video.onloadedmetadata = () => video.play()
-    return () => {
-      video.srcObject = null
+    if (!cameraDialogOpen && streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
     }
   }, [cameraDialogOpen])
 
@@ -258,7 +274,7 @@ const CardFormPage = () => {
         <DialogTitle>Take photo</DialogTitle>
         <DialogContent sx={{ position: 'relative', bgcolor: 'black', minHeight: 320 }}>
           <video
-            ref={videoRef}
+            ref={setVideoRef}
             autoPlay
             playsInline
             muted
